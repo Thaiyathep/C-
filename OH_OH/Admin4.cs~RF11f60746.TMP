@@ -1,0 +1,240 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using MySql.Data.MySqlClient;
+
+namespace OH_OH
+{
+    public partial class FormAM4 : Form
+    {
+        List<Bill> showbillHistory = new List<Bill>();
+        private MySqlConnection databaseConnection()
+        {
+            string connectionString = " datasource=127.0.0.1;port=3306;username=root;password=;database=angpao;";
+            MySqlConnection conn = new MySqlConnection(connectionString);
+            return conn;
+        }
+
+        public FormAM4()
+        {
+            InitializeComponent();
+        }
+
+        private void Backbutton_Click(object sender, EventArgs e)
+        {
+            FormAM1 A = new FormAM1();
+            A.Show();
+            this.Close();
+        }
+
+      
+        private void showHistoryAM()
+        {
+            MySqlConnection conn = databaseConnection();
+            DataSet ds = new DataSet();
+            conn.Open();
+
+            MySqlCommand cmd;
+            cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM history";
+
+            MySqlDataAdapter adapter = new MySqlDataAdapter(cmd);
+            adapter.Fill(ds);
+            conn.Close();
+
+            dataHistoryAM.DataSource = ds.Tables[0].DefaultView;
+        }
+
+        private void FormAM4_Load(object sender, EventArgs e)
+        {
+           showHistoryAM();
+        }
+
+
+        public int totalsum ;
+        public int totalnumber ;
+       
+        //ปุ่มค้นหา
+        private void searchButton_Click(object sender, EventArgs e)
+        {
+            MySqlConnection conn = databaseConnection();
+            
+            DataSet ds = new DataSet();
+            conn.Open();
+            MySqlCommand cmd;
+            cmd = conn.CreateCommand();
+           
+            if (STdateTimePicker.Value.ToString("yyyy-MM-dd") == LdateTimePicker.Value.ToString("yyyy-MM-dd")) 
+            {
+                if (TypeAM4.Text == "สินค้าทั้งหมด")//ต่อวัน
+                {
+                    if (searchdata.Text == "") 
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time = '%" + STdateTimePicker.Value.ToString("yyyy-MM-dd") + "%'";
+                    }
+                    else
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time = '%" + STdateTimePicker.Value.ToString("yyyy-MM-dd") + "%'  Name like '%" + searchdata.Text + "%'";
+                    }
+                }
+                else
+                {
+                    if (searchdata.Text == "")
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time = '%" + STdateTimePicker.Value.ToString("yyyy-MM-dd") + "%' AND Type ='" + TypeAM4.Text + "'";
+                    }
+                    else
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time = '%" + STdateTimePicker.Value.ToString("yyyy-MM-dd") + "%' AND Name like '%" + searchdata.Text + "%'AND Username_order like '%" + searchdata.Text + "%'AND Type ='" + TypeAM4.Text + "'";
+                    }
+                }
+                MySqlDataAdapter da = new MySqlDataAdapter(cmd);
+                da.Fill(ds);
+                totalsum = 0;
+                totalnumber = 0;
+                MySqlDataReader read = cmd.ExecuteReader();
+                while (read.Read())
+                {
+                    totalsum = totalsum + int.Parse(read["Price"].ToString());
+                    totalnumber = totalnumber + int.Parse(read["Number"].ToString());
+                }
+                read.Close();
+                conn.Close();
+                dataHistoryAM.DataSource = ds.Tables[0].DefaultView;
+                TotalcosttextBox.Text = $"{totalsum}";
+                TotalnumbertextBox.Text = $"{totalnumber}";
+
+            }
+            else //ระหว่างของวัน
+            {
+                if (TypeAM4.Text == "สินค้าทั้งหมด")
+                {
+                    if (searchdata.Text == "")
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time between @date1 and @date2";
+                    }
+                    else
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time between @date1 and @date2 AND Name like '%" + searchdata.Text + "%'AND Username_order like '%" + searchdata.Text + "%'";
+                    }
+
+                }
+                else
+                {
+                    if (searchdata.Text == "")
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time between @date1 and @date2 AND Type ='" + TypeAM4.Text + "'";
+                    }
+                    else
+                    {
+                        cmd.CommandText = $"SELECT * FROM history Where Time between @date1 and @date2 AND Name like '%" + searchdata.Text + "%'AND Username_order like '%" + searchdata.Text + "%' AND Type ='" + TypeAM4.Text + "'";
+                    }
+
+                }
+                MySqlDataAdapter da = new MySqlDataAdapter(cmd);
+
+                da.SelectCommand.Parameters.AddWithValue("@date1", STdateTimePicker.Value.ToString("yyyy-MM-dd"));
+                da.SelectCommand.Parameters.AddWithValue("@date2", LdateTimePicker.Value.ToString("yyyy-MM-dd"));
+                da.Fill(ds);
+
+                totalsum = 0;
+                totalnumber = 0;
+                MySqlDataReader read = cmd.ExecuteReader();
+                while (read.Read())
+                {
+                    totalsum = totalsum + int.Parse(read["Price"].ToString());
+                    totalnumber = totalnumber + int.Parse(read["Number"].ToString());
+                }
+                read.Close();
+                conn.Close();
+
+                dataHistoryAM.DataSource = ds.Tables[0].DefaultView;
+                TotalcosttextBox.Text = $"{totalsum}";
+                TotalnumbertextBox.Text = $"{totalnumber}";
+
+            }
+        }
+    
+        
+
+        private void billHistory()
+        {
+
+            MySqlConnection conn = databaseConnection();
+            MySqlCommand bnn = new MySqlCommand("SELECT * FROM history ", conn);
+            conn.Open();
+            MySqlDataReader adapter = bnn.ExecuteReader();
+            while (adapter.Read())
+            {
+
+                Program.name = adapter.GetString("name").ToString();
+                Program.cost = adapter.GetString("Price").ToString();
+                Program.Nuber = adapter.GetString("Number").ToString();
+                Program.sum = adapter.GetString("Tote").ToString();
+                Bill item = new Bill()
+                {
+                    name = Program.name,
+                    cost = Program.cost,
+                    Nuber = Program.Nuber,
+                    sum = Program.sum,
+                };
+                showbillHistory.Add(item);
+            }
+            conn.Close();
+        }
+
+
+
+        //ปริ้น
+        private void button1_Click(object sender, EventArgs e)
+        {
+            printPreviewDialog1.Document = printDocument1; //ปริ้น
+            printPreviewDialog1.ShowDialog();
+        }
+
+        private void printDocument1_PrintPage(object sender, System.Drawing.Printing.PrintPageEventArgs e)
+        {
+            e.Graphics.DrawString("ประวัติการซือ", new Font("supermarket", 20, FontStyle.Bold), Brushes.Black, new Point(400, 50));
+            e.Graphics.DrawString("A.ANGPAO MINIMART ", new Font("supermarket", 24, FontStyle.Bold), Brushes.Black, new Point(255, 90));
+            e.Graphics.DrawString("พิมพ์เมื่อ " + System.DateTime.Now.ToString("dd/MM/yyyy HH : mm : ss น."), new Font("supermarket", 14, FontStyle.Regular), Brushes.Black, new PointF(525, 150));
+            e.Graphics.DrawString("ข้อมูลร้าน :ไทยเทพ พนาวัลย์สมบัติ  0611058788", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, 150));
+            e.Graphics.DrawString("              บ้านเอื้ออาทร 208/876 หมู่ที่ 8 ถนนเลี่ยงเมือง ", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, 195));
+            e.Graphics.DrawString("              ตำบลในเมือง อำเภอเมืองขอนแก่น จังหวัดขอนแก่น 40000", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, 240));
+            e.Graphics.DrawString("--------------------------------------------------------------------------------------------", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, 285));
+            e.Graphics.DrawString("    ลำดับ          ชื่อเมนู                      รายการสินค้า        จำนวน       ราคา (บาท)", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, 315));
+            e.Graphics.DrawString("--------------------------------------------------------------------------------------------", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, 345));
+            int number = 1;
+            int y = 345;
+
+            foreach (var i in showbillHistory)
+            {
+                y = y + 35;
+                e.Graphics.DrawString("   " + number.ToString(), new Font("supermarket", 14, FontStyle.Regular), Brushes.Black, new PointF(100, y));
+                e.Graphics.DrawString("   " + i.name, new Font("supermarket", 14, FontStyle.Regular), Brushes.Black, new PointF(190, y));
+                e.Graphics.DrawString("   " + i.cost, new Font("supermarket", 14, FontStyle.Regular), Brushes.Black, new PointF(400, y));
+                e.Graphics.DrawString("   " + i.Nuber, new Font("supermarket", 14, FontStyle.Regular), Brushes.Black, new PointF(560, y));
+                e.Graphics.DrawString("   " + i.sum, new Font("supermarket", 14, FontStyle.Regular), Brushes.Black, new PointF(650, y));
+                number = number + 1;
+
+            }
+            e.Graphics.DrawString("--------------------------------------------------------------------------------------------", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(80, y + 30));
+            //e.Graphics.DrawString("รวมทั้งสิ้น           " + AllP_textBox.Text + " บาท", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(570, (y + 30) + 45));
+            e.Graphics.DrawString("ชื่อผู้ให้บริการ        " + Program.userid.ToString(), new Font("supermarket", 16, FontStyle.Bold), Brushes.Black, new Point(80, (y + 30) + 45));
+            //e.Graphics.DrawString("รับเงิน             " + textBox1.Text + " บาท", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(570, ((y + 30) + 45) + 45));
+            //e.Graphics.DrawString("เงินทอน            " + textBox2.Text + " บาท", new Font("supermarket", 16, FontStyle.Regular), Brushes.Black, new Point(570, (((y + 30) + 45) + 45) + 45));
+
+
+        }
+        //รี
+        private void button_Click(object sender, EventArgs e)
+        {
+            showHistoryAM();
+        }
+    } 
+}

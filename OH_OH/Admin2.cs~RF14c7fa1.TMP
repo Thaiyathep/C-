@@ -1,0 +1,159 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using MySql.Data.MySqlClient;
+using System.IO;
+
+namespace OH_OH
+{
+    public partial class FormAM2 : Form
+    {
+        private MySqlConnection databaseConnection()
+        {
+            string connectionString = " datasource=127.0.0.1;port=3306;username=root;password=;database=angpao;";
+            MySqlConnection conn = new MySqlConnection(connectionString);
+            return conn;
+        }
+
+
+        public FormAM2()
+        {
+            InitializeComponent();
+        }
+        //ย้อนกลับ
+        private void Backbutton_Click(object sender, EventArgs e)
+        {
+            FormAM1 A = new FormAM1();
+            A.Show();
+            this.Close();
+
+        }
+
+        private void FormAM2_Load(object sender, EventArgs e)
+        {
+            showStock();
+            showType();
+        }
+                
+        private void showStock()
+        {
+            MySqlConnection conn = databaseConnection();
+            DataSet ds = new DataSet();
+            conn.Open();
+
+            MySqlCommand cmd;
+            cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT * FROM stock";
+
+            MySqlDataAdapter adapter = new MySqlDataAdapter(cmd);
+            adapter.Fill(ds);
+            conn.Close();
+
+            dataAM.DataSource = ds.Tables[0].DefaultView; //เเสดงตารางในdata1
+        }
+        
+        public string type;
+        private void showType()
+        {
+            if(radioButton6.Checked)
+            {
+                showStock();
+            }
+            else
+            {
+                checktype(); //เช็ค
+                MySqlConnection conn = databaseConnection();
+                DataSet ds = new DataSet();
+                conn.Open();
+
+                MySqlCommand cmd;
+                cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT * FROM stock WHERE Type = '" + type + "'";
+
+                MySqlDataAdapter adapter = new MySqlDataAdapter(cmd);
+                adapter.Fill(ds);
+                conn.Close();
+
+                dataAM.DataSource = ds.Tables[0].DefaultView; //เเสดงตารางในdata1
+            }
+            
+        }
+        private void checktype()
+        {
+            if (radioButton1.Checked)
+            {
+                type = "สุขภัณฑ์ครัวเรือน";
+            }
+            if (radioButton2.Checked)
+            {
+                type = "เครื่องปรุง";
+            }
+            if (radioButton3.Checked)
+            {
+                type = "อาหารสำเร็จรูป";
+            }
+            if (radioButton4.Checked)
+            {
+                type = "เครื่องดื่่ม";
+            }
+            if (radioButton5.Checked)
+            {
+                type = "อาหารว่าง";
+            }
+        }
+
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+            showType();
+        }
+
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+            showType();
+        }
+
+        private void radioButton3_CheckedChanged(object sender, EventArgs e)
+        {
+            showType();
+        }
+
+        private void radioButton4_CheckedChanged(object sender, EventArgs e)
+        {
+            showType();
+        }
+
+        private void radioButton5_CheckedChanged(object sender, EventArgs e)
+        {
+            showType();
+        }
+
+        private void dataAM_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            dataAM.CurrentRow.Selected = true;
+            int selectedRow = dataAM.CurrentCell.RowIndex;  // CurrentCell.RowIndex คลิกที่ไหน selectedRow เปลี่ยนไปตามที่คลิก
+            string addname = Convert.ToString(dataAM.Rows[selectedRow].Cells["Name_Product"].Value);
+            //.Cells["Product"].Value คือ รับค่าจาก cellที่มีหัวคอลัม ชื่อ Productแถวที่ [selectedRow] แปรงเป็น string เเล้วนำไปใส่ใน addname
+            MySqlConnection con = databaseConnection();
+            MySqlCommand cmd = con.CreateCommand();
+            con.Open();
+            cmd.CommandText = "SELECT Image FROM stock WHERE Name_Product = '" + addname + "'  ";
+
+
+            MySqlDataAdapter da = new MySqlDataAdapter(cmd); //แปลงข้อมูลเพื่อไปแสดงหน้าโปรแกรม
+            DataSet ds = new DataSet();
+            da.Fill(ds);
+            if (ds.Tables[0].Rows.Count > 0)
+            {
+                MemoryStream ms = new MemoryStream((byte[])ds.Tables[0].Rows[0]["Image"]);  ///เรียกใช้ข้อมูลจาก dataset บรรทัด 47 ใช้ตารางช่อง 0 เเถว0 หัวคอลัมชื่อ Image นำไปใส่ตัวแปรที่ชื่อ ms 
+                pictureBox1.Image = new Bitmap(ms); //จากนั้นเเสดงลงใน pictureBox1
+            }
+        }
+
+    }
+}
